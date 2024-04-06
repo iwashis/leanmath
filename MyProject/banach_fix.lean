@@ -170,6 +170,11 @@ lemma contractive_implies_cauchy {V : Type*}
   intro ε hε
   sorry -- sorry :(
 
+def is_fixpoint {V : Type*}
+  [AddCommGroup V]
+  [Module ℝ V]
+  (f : V → V) (x : V) : Prop := f x = x
+
 theorem fix_point_existence {V : Type*}
   [AddCommGroup V]
   [Module ℝ V]
@@ -177,7 +182,7 @@ theorem fix_point_existence {V : Type*}
   -- the hypothesis:
   [bs : banach_space V ]
   -- the statement:
-  : ∀ ( f : V → V ), is_contractive_mapping ( f ) → ∃ x, f x = x
+  : ∀ ( f : V → V ), is_contractive_mapping ( f ) → ∃ x, is_fixpoint f x
   := by
   intro f iscontr
   let ⟨ K , K_gt_0 , _ , contractive_condition ⟩ := iscontr
@@ -211,3 +216,52 @@ theorem fix_point_existence {V : Type*}
       K * (ε' / K)  = ε' := by field_simp; ring
     exact ⟨ succ N , hN' ⟩
   exact ⟨ x , uniqueness_of_limits s (f x) x  ⟨ h' , h ⟩ ⟩
+
+
+
+-- Uniqueness of fixpoints:
+lemma norm_positive {V : Type*}
+  [AddCommGroup V]
+  [Module ℝ V]
+  [ns : normed_vectorspace V]
+  : ∀ x y, ¬ (x = y) →  0 < ns.norm (x + -y) := by
+  intro x y
+  intro h
+  have norm_nonnegative : ns.norm (x + -y) ≥ 0 := by
+    exact ns.norm_pos (x + -y)
+
+  have norm_zero : ns.norm (x + -y) = 0 ↔ x + -y = 0 := by
+    exact ns.norm_eq_zero (x + -y)
+
+  have x_eq_y : x = y ↔ x + -y = 0 := by
+    rw [add_neg_eq_zero]
+  simp [x_eq_y] at h
+  have h' : ¬ ( ns.norm (x + -y) = 0) := by
+    exact mt norm_zero.mp h
+  have h'' :  0 ≠ normed_vectorspace.norm (x + -y) := by
+    exact Ne.symm h'
+  have h3 : 0 < ns.norm (x + -y) ∨ ns.norm (x + -y) < 0 := by
+    exact lt_or_gt_of_ne h''
+
+  exact h3.resolve_right (not_lt.mpr norm_nonnegative)
+
+
+theorem fix_point_uniqueness {V : Type*}
+  [AddCommGroup V]
+  [Module ℝ V]
+  [ns : normed_vectorspace V]
+  -- the statement:
+  : ∀ ( f : V → V ), is_contractive_mapping ( f )
+    → ∀ x y, is_fixpoint f x ∧  is_fixpoint f y → x = y := by
+    intro f iscontr
+    let ⟨ K , _ , K_lt_1 , contractive_condition ⟩ := iscontr
+    intro x y
+    intro h
+    let ⟨ h1 , h2 ⟩ := h
+    by_contra x_neq_y
+    have diff : ns.norm ( x + -y ) <  ns.norm ( x + -y ) :=
+      calc ns.norm (x + -y) = ns.norm (f x + -f y) := by rw [h1, h2]
+      ns.norm (f x + -f y) ≤ K * ns.norm (x + -y) := by exact contractive_condition x y
+      K * ns.norm (x + -y)  < 1 * ns.norm ( x + -y ) := by exact mul_lt_mul_of_pos_right K_lt_1 (norm_positive x y x_neq_y)
+      1 * ns.norm ( x + -y ) = ns.norm ( x + -y )  := by rw[mul_comm, mul_one]
+    linarith
