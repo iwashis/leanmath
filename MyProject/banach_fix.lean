@@ -69,15 +69,9 @@ lemma norm_negation {V : Type*}
   rw [one_mul]
 
 
-lemma neg_equal  (x y : ℝ ) : ¬ (x = y) → ¬ (y = x) := by
-  intro h
-  intro h'
-  apply h
-  rw [h']
-
 lemma zero_real (x : ℝ) (h1: x ≥ 0) (h2 : ∀ ε > 0, x < ε) : x = 0 := by
   by_contra h
-  have hx : x > 0 := lt_of_le_of_ne h1 (neg_equal x 0 h)
+  have hx : x > 0 := lt_of_le_of_ne h1 (Ne.symm h)
   let hx2 := h2 x hx
   linarith [hx, hx2]
 
